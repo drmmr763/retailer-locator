@@ -8,6 +8,8 @@
 // No direct access
 defined( '_JEXEC' ) or die( 'Restricted access' );
 
+$app = JFactory::getApplication();
+
 $controller = JControllerLegacy::getInstance('RestonicRetailers');
 
 $controller->execute($app->input->get('task'));

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="component" version="2.5" method="upgrade">
+    <name>Restonic Retailers</name>
+    <author>Chad Windnagle</author>
+    <creationDate>June 15 2014</creationDate>
+    <copyright>Servant Holdings, LLC.  All rights reserved.</copyright>
+    <authorEmail>chad@cohesivewebsites.com</authorEmail>
+    <authorUrl>www.cohesivewebsites.com</authorUrl>
+    <version>3.0</version>
+    <license>http://www.gnu.org/licenses/gpl-2.0.html GNU/GPL</license>
+    <description>Locate retailers extension</description>
+    <files folder="components/com_restonicretailers">
+        <folder>views</folder>
+        <filename>controller.php</filename>
+        <filename>restonicretailers.php</filename>
+    </files>
+    <administration>
+        <menu>Restonic Retailers</menu>
+        <files folder="administrator/components/com_restonicretailers">
+            <filename>locateretailers.php</filename>
+            <filename>locateretailers.xml</filename>
+        </files>
+    </administration>
+</extension>

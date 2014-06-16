@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<config>
+    <fieldset
+            name="database"
+            label="Database Connection"
+            description="the database connection details">
+                <field name="host" type="text" label="Database host" description="the host location of the mysql server" />
+                <field name="db_user" type="text" label="Database user" description="the username for the db user" />
+                <field name="db_password" type="password" label="DB Pass" description="The password for the database user" />
+                <field name="db_name" type="text" label="Database name" description="the name of the database to connect too" />
+    </fieldset>
+    <fieldset
+            name="googlemaps"
+            label="Google Maps API"
+            description="The google maps API login details">
+
+                <field name="gmap_apikey" type="text" label="Google Maps API Key" description="The google maps API Key"/>
+    </fieldset>
+</config>

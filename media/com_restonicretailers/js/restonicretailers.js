@@ -37,15 +37,17 @@ function formSubmit()
         return
     }
 
-    geocodeZipcode(zip, function(results) {
-        if (! results)
+    geocodeZipcode(zip, function(latlong) {
+        if (! latlong)
         {
             return
         }
 
-        getRetailerLocations(results);
-
-        console.log(results);
+        lookupDatabaseRecords(latlong, function(recordsList) {
+            console.log(recordsList);
+            // next level is to write results to the dom
+            // printOutResults(recordsList)
+        });
 
     });
 
@@ -133,11 +135,20 @@ function getZipcode()
     return false;
 }
 
-function getRetailerLocations(latlong)
+function lookupDatabaseRecords(latlong, callback)
 {
-    url = 'index.php?option=com_restonicretailers&view=retailerlocations&format=json';
-    xmlhttp.open('post', url, true);
-    xmlhttp.send(latlong);
+
+    var url = 'index.php?option=com_restonicretailers&view=retalerlocations&format=json';
+
+    console.log('records');
+    console.log(latlong);
+
+    jQuery.ajax({
+       type: "POST",
+        url: url,
+        data: latlong,
+        dataType: "json"
+    });
 }
 
 

@@ -138,7 +138,7 @@ function getZipcode()
 function lookupDatabaseRecords(latlong, callback)
 {
 
-    var url = 'index.php?option=com_restonicretailers&view=retalerlocations&format=json';
+    var url = 'index.php?option=com_restonicretailers&view=retailerlocations&format=json';
 
     console.log('records');
     console.log(latlong);
@@ -147,7 +147,11 @@ function lookupDatabaseRecords(latlong, callback)
        type: "POST",
         url: url,
         data: latlong,
-        dataType: "json"
+        dataType: "json",
+        success: function(result)
+        {
+            console.log(result);
+        }
     });
 }
 

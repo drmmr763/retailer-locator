@@ -13,7 +13,6 @@ class RestonicRetailersViewRetailerLocations extends JViewLegacy
 	public function display($tpl = null)
 	{
 		$this->items = $this->get('Items');
-
 		echo json_encode($this->items);
 
 	}

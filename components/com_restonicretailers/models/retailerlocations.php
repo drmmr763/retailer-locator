@@ -31,6 +31,20 @@ class RestonicRetailersModelRetailerLocations extends JModelList
 		parent::setDbo($db);
 	}
 
+	public function getItems()
+	{
+		$items = parent::getItems();
+
+		$itemList = array();
+
+		foreach($items as $item)
+		{
+			$itemList[] = $item;
+		}
+
+		return $itemList;
+	}
+
 	/*
 	 * returns a query for use in getItems method
 	 * Designed to be used with the haversine formula query

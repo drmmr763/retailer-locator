@@ -44,9 +44,9 @@ function formSubmit()
         }
 
         lookupDatabaseRecords(latlong, function(recordsList) {
-            console.log(recordsList);
-            // next level is to write results to the dom
-            // printOutResults(recordsList)
+            getLocationListDirections(recordsList, latlong, function(calculatedLocations) {
+
+            });
         });
 
     });
@@ -109,6 +109,8 @@ function geocodeZipcode(zip, callback)
 
         var location = results[0].geometry.location;
 
+        console.log(location);
+
         // build json object
         var latlong =
         {
@@ -148,12 +150,35 @@ function lookupDatabaseRecords(latlong, callback)
         url: url,
         data: latlong,
         dataType: "json",
-        success: function(result)
+        success: function(resultList)
         {
-            console.log(result);
+            callback(resultList);
         }
     });
 }
 
+function getLocationListDirections(resultList, latlong, callback)
+{
+    console.log('write log');
+    console.log(latlong);
+    console.log(resultList);
 
+    latlongMap = new google.maps.LatLng(latlong.latitude, latlong.longitude);
 
+    origins = [];
+    destinations = [];
+
+    for(iterator = 0; iterator < resultList.length; iterator++)
+    {
+
+        destinations.push(new google.maps.LatLng(resultList[iterator].location_lat, resultList[iterator].location_long));
+    }
+
+    console.log(destinations);
+
+}
+
+function getDistanceCalculations(element, index, array)
+{
+    console.log(element, index, array);
+}

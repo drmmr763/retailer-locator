@@ -135,8 +135,6 @@ function getZipcode()
 {
     var zipcode = document.getElementById('zip').value;
 
-    zipcode = '32168';
-
     if (zipcode.length && zipcode != '')
     {
         return zipcode;
@@ -149,10 +147,19 @@ function lookupDatabaseRecords(latlong, callback)
 {
     var url = 'index.php?option=com_restonicretailers&view=retailerlocations&format=json';
 
+    var maximumDistance = document.getElementById('distanceConfig');
+
+    var data = {
+        'latitude': latlong.latitude,
+        'longitude': latlong.longitude,
+        'maximumDistance': maximumDistance.options[maximumDistance.selectedIndex].value
+    };
+
+
     var request = jQuery.ajax({
         type: "POST",
         url: url,
-        data: latlong,
+        data: data,
         dataType: "json"
     }); // end ajax
 
@@ -194,25 +201,6 @@ function addResultToList(locationRecord)
 {
     console.log(locationRecord);
     var resultList = document.getElementById('retailer-locations');
-
-    /*
-
-    resultList.innerHTML += '<div class="retailer-location">';
-    resultList.innerHTML +=     '<h3>' + locationRecord.location_name + '</h3>'
-    resultList.innerHTML +=     '<ul>';
-    resultList.innerHTML +=         addBlockLine('Phone', locationRecord.location_phone);
-    resultList.innerHTML +=         addBlockLine('Address', locationRecord.location_address);
-    resultList.innerHTML +=         addBlockLine('City', locationRecord.location_city);
-    resultList.innerHTML +=         addBlockLine('State', locationRecord.location_state);
-    resultList.innerHTML +=         addBlockLine('Zipcode', locationRecord.location_zip);
-    resultList.innerHTML +=         addBlockLine('Distance (Est Miles)', locationRecord.location_distance);
-    resultList.innerHTML +=         addWebLink('facebook', locationRecord.location_facebook);
-    resultList.innerHTML +=         addWebLink('twitter', locationRecord.location_twitter);
-    resultList.innerHTML +=         addWebLink('website', locationRecord.location_website);
-
-    resultList.innerHTML +=     '</ul>'
-    resultList.innerHTML += '</div>';
-    */
     resultList.innerHTML += '<div class="retailer-location">';
     resultList.innerHTML += recordTextBlock(locationRecord);
     resultList.innerHTML += '</div>';

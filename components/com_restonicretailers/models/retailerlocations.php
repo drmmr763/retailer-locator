@@ -53,6 +53,12 @@ class RestonicRetailersModelRetailerLocations extends JModelList
 
 	protected function getListQuery()
 	{
+		$input = JFactory::getApplication()->input;
+
+		$latitude = $input->getString('latitude');
+		$longitude = $input->getString('longitude');
+		$maximumDistance = $input->getString('maximumDistance');
+
 		// get the db instance
 		$db = $this->getDbo();
 
@@ -67,12 +73,12 @@ class RestonicRetailersModelRetailerLocations extends JModelList
 						d.lat as location_lat,  d.long as location_long, distance as location_distance');
 
 		// haversine is a string subquery
-		$query->from($this->haversineQuery(29.0034265, -81.05338540000002));
+		$query->from($this->haversineQuery($latitude, $longitude,$maximumDistance));
 
 		$query->where('distance <= radius');
 		$query->order('distance');
 
-		$db->setQuery($query, 0, 15);
+		$db->setQuery($query);
 
 		return $query;
 	}

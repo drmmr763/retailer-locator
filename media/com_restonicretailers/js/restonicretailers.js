@@ -38,21 +38,16 @@ function formSubmit()
     }
 
     geocodeZipcode(zip, function(latlong) {
-        if (! latlong)
-        {
-            return
-        }
+        lookupDatabaseRecords(latlong, function(results) {
 
-        lookupDatabaseRecords(latlong, function(recordsList) {
-            getLocationListDirections(recordsList, latlong, function(calculatedLocations) {
+            for (var i = 0; i < results.length; i++)
+            {
+                addResultToList(results[i]);
 
-            });
+                //getOriginDestinationDrivingDistance(latlong, results[i]);
+            }
         });
-
     });
-
-
-    console.log(zip);
 }
 
 /*
@@ -139,46 +134,116 @@ function getZipcode()
 
 function lookupDatabaseRecords(latlong, callback)
 {
-
     var url = 'index.php?option=com_restonicretailers&view=retailerlocations&format=json';
 
-    console.log('records');
-    console.log(latlong);
-
-    jQuery.ajax({
-       type: "POST",
+    var request = jQuery.ajax({
+        type: "POST",
         url: url,
         data: latlong,
-        dataType: "json",
-        success: function(resultList)
-        {
-            callback(resultList);
-        }
-    });
+        dataType: "json"
+    }); // end ajax
+
+    request.success(callback);
 }
 
-function getLocationListDirections(resultList, latlong, callback)
+function getOriginDestinationDrivingDistance(origin, destination, callback)
 {
     console.log('write log');
-    console.log(latlong);
-    console.log(resultList);
+    console.log(origin);
+    console.log(destination);
 
-    latlongMap = new google.maps.LatLng(latlong.latitude, latlong.longitude);
+    // create origin object ew object
+    var originLocation = new google.maps.LatLng(origin.latitude, origin.longitude);
 
-    origins = [];
-    destinations = [];
+    // add origins array - google won't accept anything but
+    var originLocationList = [originLocation];
 
-    for(iterator = 0; iterator < resultList.length; iterator++)
-    {
+    // same for destination
+    var destinationLocation = new google.maps.LatLng(destination.location_lat, destination.location_long);
+    var destinationLocationList = [destinationLocation];
 
-        destinations.push(new google.maps.LatLng(resultList[iterator].location_lat, resultList[iterator].location_long));
-    }
+    // get a new service
+    var service = new google.maps.DistanceMatrixService();
 
-    console.log(destinations);
-
+    service.getDistanceMatrix(
+        {
+            origins: originLocationList,
+            destinations: destinationLocationList,
+            travelMode: google.maps.TravelMode.DRIVING,
+            unitSystem: google.maps.UnitSystem.IMPERIAL,
+            avoidHighways: false,
+            avoidTolls: false
+        }, callback
+    )
 }
 
-function getDistanceCalculations(element, index, array)
+function addResultToList(locationRecord)
 {
-    console.log(element, index, array);
+    console.log(locationRecord);
+    var resultList = document.getElementById('retailer-locations');
+
+    resultList.innerHTML += '<div class="retailer-location">';
+    resultList.innerHTML +=     '<h3>' + locationRecord.location_name + '</h3>'
+    resultList.innerHTML +=     '<ul>';
+    resultList.innerHTML +=         addBlockLine('Phone', locationRecord.location_phone);
+    resultList.innerHTML +=         addBlockLine('Address', locationRecord.location_address);
+    resultList.innerHTML +=         addBlockLine('City', locationRecord.location_city);
+    resultList.innerHTML +=         addBlockLine('State', locationRecord.location_state);
+    resultList.innerHTML +=         addBlockLine('Zipcode', locationRecord.location_zip);
+    resultList.innerHTML +=         addBlockLine('Distance (Est Miles)', locationRecord.location_distance);
+    resultList.innerHTML +=         addWebLink('facebook', locationRecord.location_facebook);
+    resultList.innerHTML +=         addWebLink('twitter', locationRecord.location_twitter);
+    resultList.innerHTML +=         addWebLink('website', locationRecord.location_website);
+
+    resultList.innerHTML +=     '</ul>'
+    resultList.innerHTML += '</div>';
+}
+
+function addBlockLine(label, lineContent)
+{
+    if (lineContent == '')
+    {
+        return;
+    }
+
+    return '<li>' + label + ': ' + lineContent + '</li>';
+}
+
+
+function addWebLink(label, linkSource)
+{
+    if (linkSource == '')
+    {
+        return;
+    }
+
+    // init vars
+    var imgMarkup;
+    var linkMarkup;
+
+    if (label == 'facebook')
+    {
+        imgMarkup = '<img src="/images/social-icons/facebook.png" />';
+        linkMarkup = '<a target="_blank" href="' + linkSource +'">' + imgMarkup + '</a>';
+    }
+
+    if (label == 'twitter')
+    {
+        imgMarkup = '<img src="/images/social-icons/twitter.png" />';
+        linkMarkup = '<a target="_blank" href="' + linkSource +'">' + imgMarkup + '</a>';
+    }
+
+    if (label == 'website')
+    {
+        imgMarkup = '<img src="/images/social-icons/goodbed.png" />';
+        linkMarkup = '<a target="_blank" href="' + linkSource +'">' + imgMarkup + '</a>';
+    }
+
+    // markup vars didn't get set so exit the function
+    if ((!imgMarkup || imgMarkup == '') || (!linkMarkup || linkMarkup == ''))
+    {
+        return false;
+    }
+
+    return '<li>' + linkMarkup + '</li>';
 }

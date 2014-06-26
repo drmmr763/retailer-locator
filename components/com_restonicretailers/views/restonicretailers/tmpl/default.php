@@ -23,5 +23,6 @@
 	    <div class="fade alert hidden"></div>
 	    <div id="results"></div>
 	    <div id="no"></div>
+		<div id="retailer-locations"></div>
 	</form>
 </div>

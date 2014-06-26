@@ -40,12 +40,24 @@ function formSubmit()
     geocodeZipcode(zip, function(latlong) {
         lookupDatabaseRecords(latlong, function(results) {
 
+            var bounds = new google.maps.LatLngBounds();
+
+
             for (var i = 0; i < results.length; i++)
             {
-                addResultToList(results[i]);
+                console.log(results[i].location_lat, results[i].location_long);
+                var locationLatLong = new google.maps.LatLng(results[i].location_lat, results[i].location_long);
 
+
+                bounds.extend(locationLatLong);
+
+                addResultToList(results[i]);
+                addMapPins(results[i]);
                 //getOriginDestinationDrivingDistance(latlong, results[i]);
             }
+
+            map.setCenter(bounds.getCenter());
+            map.fitBounds(bounds);
         });
     });
 }
@@ -68,7 +80,8 @@ function buildMapOnLoad()
                 mapTypeId: google.maps.MapTypeId.ROADMAP
             };
 
-            var map = new google.maps.Map(document.getElementById("results"), mapOptions);
+            // i hate globals but we don't have a choice here
+            map = new google.maps.Map(document.getElementById("results"), mapOptions);
         }
     });
 
@@ -182,6 +195,8 @@ function addResultToList(locationRecord)
     console.log(locationRecord);
     var resultList = document.getElementById('retailer-locations');
 
+    /*
+
     resultList.innerHTML += '<div class="retailer-location">';
     resultList.innerHTML +=     '<h3>' + locationRecord.location_name + '</h3>'
     resultList.innerHTML +=     '<ul>';
@@ -197,7 +212,63 @@ function addResultToList(locationRecord)
 
     resultList.innerHTML +=     '</ul>'
     resultList.innerHTML += '</div>';
+    */
+    resultList.innerHTML += '<div class="retailer-location">';
+    resultList.innerHTML += recordTextBlock(locationRecord);
+    resultList.innerHTML += '</div>';
+
 }
+
+function recordTextBlock(locationRecord)
+{
+    var textblock = '';
+    textblock +=     '<h3>' + locationRecord.location_name + '</h3>'
+    textblock +=     '<ul>';
+    textblock +=         addBlockLine('Phone', locationRecord.location_phone);
+    textblock +=         addBlockLine('Address', locationRecord.location_address);
+    textblock +=         addBlockLine('City', locationRecord.location_city);
+    textblock +=         addBlockLine('State', locationRecord.location_state);
+    textblock +=         addBlockLine('Zipcode', locationRecord.location_zip);
+    textblock +=         addBlockLine('Distance (Est Miles)', locationRecord.location_distance);
+    textblock +=         addWebLink('facebook', locationRecord.location_facebook);
+    textblock +=         addWebLink('twitter', locationRecord.location_twitter);
+    textblock +=         addWebLink('website', locationRecord.location_website);
+    textblock +=     '</ul>'
+
+    return textblock;
+}
+
+
+function addMapPins(locationRecord)
+{
+    var locationLatLong = new google.maps.LatLng(locationRecord.location_lat, locationRecord.location_long);
+
+    var marker = new google.maps.Marker({
+        position: locationLatLong,
+        map: map, // this is a global variable - uck
+        icon: '/media/com_restonicretailers/images/map-icon.png'
+    });
+
+    var infowindow = addPinInfoWindow(locationLatLong, locationRecord);
+
+    google.maps.event.addListener(marker, 'click', function(){
+        infowindow.open(map, marker);
+    })
+
+    addPinInfoWindow(locationLatLong, locationRecord);
+}
+
+function addPinInfoWindow(latlng, locationRecord)
+{
+    var content = recordTextBlock(locationRecord);
+    var info = new google.maps.InfoWindow({
+        position: latlng,
+        content: content,
+    })
+
+    return info;
+}
+
 
 function addBlockLine(label, lineContent)
 {

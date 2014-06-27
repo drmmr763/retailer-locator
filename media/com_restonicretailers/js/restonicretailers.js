@@ -8,6 +8,11 @@ google.maps.event.addDomListener(window, 'load', pageMapLoad);
 // add watcher to the form submit
 window.addEventListener('submit', formSubmit, false);
 
+// these make me sad
+globalResultList = '';
+globalOriginLatlng = ''
+globalArrayCounter = 0;
+
 /*
  * Loads the map function on page load
  * called by google's map loader
@@ -29,31 +34,56 @@ function formSubmit()
 {
     event.preventDefault(); // stop form submit
 
+    // clear any previous results
+    clearResultList();
+
+    // clear old errors
+    clearErrors();
+
+    // clear the global vars list
+    globalResultList = '';
+    globalOriginLatlng = '';
+    globalArrayCounter = 0;
+
+    // init the map
+    buildMapOnLoad();
+
     var zip = getZipcode()
 
     if(! zip)
     {
-        console.log('there was a zipcode issue');
         return
     }
 
+    // kick off the major tasks like geocoding, getting results and populating content
     geocodeZipcode(zip, function(latlong) {
+        // set our global placeholder
+        globalOriginLatlng = latlong;
+
+        // geocoding was successful so we can move on to getting records
         lookupDatabaseRecords(latlong, function(results) {
+
+            // if there aren't any results just quit now
+            if (! results.length || results == '')
+            {
+                writeError('No results found. Try a larger distance.');
+                return false;
+            }
 
             var bounds = new google.maps.LatLngBounds();
 
+            // throw our results into the global list
+            // hate doing this but its the only way around callback hell
+            globalResultList = results;
 
+            // add our driving distances - this is most of the remaining functionality
+            getOriginDestinationDrivingDistance();
+
+            // loop through items and expand the map area
             for (var i = 0; i < results.length; i++)
             {
-                console.log(results[i].location_lat, results[i].location_long);
                 var locationLatLong = new google.maps.LatLng(results[i].location_lat, results[i].location_long);
-
-
                 bounds.extend(locationLatLong);
-
-                addResultToList(results[i]);
-                addMapPins(results[i]);
-                //getOriginDestinationDrivingDistance(latlong, results[i]);
             }
 
             map.setCenter(bounds.getCenter());
@@ -84,9 +114,6 @@ function buildMapOnLoad()
             map = new google.maps.Map(document.getElementById("results"), mapOptions);
         }
     });
-
-    // set the map div element
-    //var map = new google.maps.Map(document.getElementById('results'), mapOptions);
 }
 
 /*
@@ -111,13 +138,12 @@ function geocodeZipcode(zip, callback)
         // validate response and return location or error
         if (status != google.maps.GeocoderStatus.OK)
         {
+            writeError('Google\'s API had an error. Readmore: ' + status);
             // something wasn't okay, send error message
             callback(status); // exit early
         }
 
         var location = results[0].geometry.location;
-
-        console.log(location);
 
         // build json object
         var latlong =
@@ -131,6 +157,11 @@ function geocodeZipcode(zip, callback)
     });
 }
 
+/*
+ * grab the zip from the DOM
+ * Does a little validation to make sure we have a value
+ */
+
 function getZipcode()
 {
     var zipcode = document.getElementById('zip').value;
@@ -140,8 +171,14 @@ function getZipcode()
         return zipcode;
     }
 
+    writeError('Your location is required!');
+
     return false;
 }
+
+/*
+ * Search database for items. Returns a json array of objects
+ */
 
 function lookupDatabaseRecords(latlong, callback)
 {
@@ -155,7 +192,6 @@ function lookupDatabaseRecords(latlong, callback)
         'maximumDistance': maximumDistance.options[maximumDistance.selectedIndex].value
     };
 
-
     var request = jQuery.ajax({
         type: "POST",
         url: url,
@@ -164,48 +200,119 @@ function lookupDatabaseRecords(latlong, callback)
     }); // end ajax
 
     request.success(callback);
+    request.error(function(jqXHR, textStatus, errorThrow){
+        writeErorr('There was an error getting data! ' + errorThrow );
+    })
+
 }
 
-function getOriginDestinationDrivingDistance(origin, destination, callback)
+/*
+ * Pretty big blocking function
+ * Loops through our global array of objects
+ * populates the result list and places our marker pins
+ */
+
+function getOriginDestinationDrivingDistance()
 {
-    console.log('write log');
-    console.log(origin);
-    console.log(destination);
+    // loop through items in the global
+    globalResultList.forEach(function(value, index, globalResultList) {
+        // build a latlng object from our global origin
+        originLocation = new google.maps.LatLng(globalOriginLatlng.latitude, globalOriginLatlng.longitude);
 
-    // create origin object ew object
-    var originLocation = new google.maps.LatLng(origin.latitude, origin.longitude);
+        // put origin latlng object into a list
+        var originLocationList = [originLocation];
 
-    // add origins array - google won't accept anything but
-    var originLocationList = [originLocation];
+        console.log(originLocationList);
 
-    // same for destination
-    var destinationLocation = new google.maps.LatLng(destination.location_lat, destination.location_long);
-    var destinationLocationList = [destinationLocation];
+        // same for destination
+        var destinationLocation = new google.maps.LatLng(value.location_lat, value.location_long);
+        var destinationLocationList = [destinationLocation];
 
-    // get a new service
-    var service = new google.maps.DistanceMatrixService();
+        console.log(destinationLocation);
 
-    service.getDistanceMatrix(
-        {
-            origins: originLocationList,
-            destinations: destinationLocationList,
-            travelMode: google.maps.TravelMode.DRIVING,
-            unitSystem: google.maps.UnitSystem.IMPERIAL,
-            avoidHighways: false,
-            avoidTolls: false
-        }, callback
-    )
+        // get a new service
+        var service = new google.maps.DistanceMatrixService();
+
+        service.getDistanceMatrix(
+            {
+                origins: originLocationList,
+                destinations: destinationLocationList,
+                travelMode: google.maps.TravelMode.DRIVING,
+                unitSystem: google.maps.UnitSystem.IMPERIAL,
+                avoidHighways: false,
+                avoidTolls: false
+            },  function(response, status) { // call back function finishes things off
+
+                    // check the status of the response
+                    if (status != google.maps.DistanceMatrixStatus.OK)
+                    {
+                        writeError('Google Maps API had a problem ' + status);
+                        return
+                    }
+
+                    // pull the global counter into a local variable
+                    var count = globalArrayCounter;
+
+                    var maximumDistance = document.getElementById('distanceConfig');
+
+                    // we need miles as text and as an integer
+                    var driving_miles_text = response.rows[0].elements[0].distance.text;
+                    var driving_miles_value = getMetersFromMiles(response.rows[0].elements[0].distance.value) // this value comes as meters
+
+                    // push the text into our global object
+                    globalResultList[count].location_driving_miles = driving_miles_text;
+
+                    // checks our driving distance
+                    // keeps us accurate around lakes, rivers and streams
+                    if (driving_miles_value < (maximumDistance.options[maximumDistance.selectedIndex].value * 1))
+                    {
+                        addResultToList(globalResultList[count]);
+                        addMapPins(globalResultList[count]);
+                    }
+                    // anything outside our max driving range gets skipped
+
+                    // increment our global counter
+                    globalArrayCounter = (count + 1);
+                }
+        )
+    })
 }
+
+/*
+ * simple function to convert meters to miles
+ * google api returns values as meters only
+ */
+
+function getMetersFromMiles(meters)
+{
+    return meters *  0.00062137;
+}
+
+/*
+ * Takes a record and appends it to the result list
+ */
 
 function addResultToList(locationRecord)
 {
-    console.log(locationRecord);
+    // get the result list element
     var resultList = document.getElementById('retailer-locations');
-    resultList.innerHTML += '<div class="retailer-location">';
-    resultList.innerHTML += recordTextBlock(locationRecord);
-    resultList.innerHTML += '</div>';
 
+    // create a new container
+    var resultContainer = document.createElement('div');
+
+    // give it a class name
+    resultContainer.className = 'retailer-location';
+
+    // set the contents
+    resultContainer.innerHTML = recordTextBlock(locationRecord);
+
+    // put it in the list
+    resultList.appendChild(resultContainer);
 }
+
+/*
+ * handy reusable function to build a text block for info window and result
+ */
 
 function recordTextBlock(locationRecord)
 {
@@ -217,7 +324,7 @@ function recordTextBlock(locationRecord)
     textblock +=         addBlockLine('City', locationRecord.location_city);
     textblock +=         addBlockLine('State', locationRecord.location_state);
     textblock +=         addBlockLine('Zipcode', locationRecord.location_zip);
-    textblock +=         addBlockLine('Distance (Est Miles)', locationRecord.location_distance);
+    textblock +=         addBlockLine('Distance (Est Miles)', locationRecord.location_driving_miles);
     textblock +=         addWebLink('facebook', locationRecord.location_facebook);
     textblock +=         addWebLink('twitter', locationRecord.location_twitter);
     textblock +=         addWebLink('website', locationRecord.location_website);
@@ -226,6 +333,9 @@ function recordTextBlock(locationRecord)
     return textblock;
 }
 
+/*
+ * Add a marker pin to the map
+ */
 
 function addMapPins(locationRecord)
 {
@@ -243,8 +353,14 @@ function addMapPins(locationRecord)
         infowindow.open(map, marker);
     })
 
+    // add in an info window
     addPinInfoWindow(locationLatLong, locationRecord);
 }
+
+/*
+ * Reusable function that takes a latlng object and content
+ * And puts it on our map as an info window
+ */
 
 function addPinInfoWindow(latlng, locationRecord)
 {
@@ -257,23 +373,30 @@ function addPinInfoWindow(latlng, locationRecord)
     return info;
 }
 
+/*
+ * Reusable function to generate list elements of labels and values
+ */
 
 function addBlockLine(label, lineContent)
 {
     if (lineContent == '')
     {
-        return;
+        return '';
     }
 
     return '<li>' + label + ': ' + lineContent + '</li>';
 }
 
+/*
+ * Useful function for building the web link icons
+ */
+
 
 function addWebLink(label, linkSource)
 {
-    if (linkSource == '')
+    if (linkSource == '' || (typeof linkSource === 'undefined'))
     {
-        return;
+        return '';
     }
 
     // init vars
@@ -305,4 +428,44 @@ function addWebLink(label, linkSource)
     }
 
     return '<li>' + linkMarkup + '</li>';
+}
+
+/*
+ * Clear any existing results from the list.
+ */
+
+function clearResultList() {
+    var resultList = document.getElementById('retailer-locations');
+    resultList.innerHTML = '';
+}
+
+/*
+ * add an error message to the error element
+ */
+
+function writeError(message)
+{
+    var errorContainer = document.getElementById('system-message-container');
+
+    // clear errors
+    clearErrors();
+
+    var errorMessage = document.createElement('div');
+
+    errorMessage.className = 'alert alert-warning';
+    errorMessage.innerHTML = '<p>' + message + '</p>';
+
+    errorContainer.appendChild(errorMessage);
+}
+
+/*
+ * Clears the error element values
+ */
+
+function clearErrors()
+{
+    var errorContainer = document.getElementById('system-message-container');
+
+    // clear old errors
+    errorContainer.innerHTML = '';
 }

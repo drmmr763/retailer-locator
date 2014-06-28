@@ -6,12 +6,28 @@
 google.maps.event.addDomListener(window, 'load', pageMapLoad);
 
 // add watcher to the form submit
-window.addEventListener('submit', formSubmit, false);
+//window.addEventListener('submit', formSubmit, false);
+
+
+jQuery(document).ready(function(){
+    jQuery('#submit').click(function(event){
+        formSubmit();
+
+
+    });
+    jQuery('#retailer-lookup').submit(function(event) {
+       // if(event.preventDefault) event.preventDefault();
+        formSubmit();
+    });
+});
+
+
 
 // these make me sad
 globalResultList = '';
 globalOriginLatlng = ''
 globalArrayCounter = 0;
+globalLatLongList = [];
 
 /*
  * Loads the map function on page load
@@ -24,6 +40,11 @@ function pageMapLoad()
     //geocodeZipcode('32168');
 }
 
+function testIE()
+{
+    alert('hello ie');
+}
+
 
 /*
  * Kicks off actions when the form is submitted
@@ -32,8 +53,6 @@ function pageMapLoad()
 
 function formSubmit()
 {
-    event.preventDefault(); // stop form submit
-
     // clear any previous results
     clearResultList();
 
@@ -44,6 +63,7 @@ function formSubmit()
     globalResultList = '';
     globalOriginLatlng = '';
     globalArrayCounter = 0;
+    globalLatLongList = [];
 
     // init the map
     buildMapOnLoad();
@@ -69,9 +89,6 @@ function formSubmit()
                 writeError('No results found. Try a larger distance.');
                 return false;
             }
-
-            var bounds = new google.maps.LatLngBounds();
-
             // throw our results into the global list
             // hate doing this but its the only way around callback hell
             globalResultList = results;
@@ -79,15 +96,8 @@ function formSubmit()
             // add our driving distances - this is most of the remaining functionality
             getOriginDestinationDrivingDistance();
 
-            // loop through items and expand the map area
-            for (var i = 0; i < results.length; i++)
-            {
-                var locationLatLong = new google.maps.LatLng(results[i].location_lat, results[i].location_long);
-                bounds.extend(locationLatLong);
-            }
 
-            map.setCenter(bounds.getCenter());
-            map.fitBounds(bounds);
+
         });
     });
 }
@@ -217,18 +227,15 @@ function getOriginDestinationDrivingDistance()
     // loop through items in the global
     globalResultList.forEach(function(value, index, globalResultList) {
         // build a latlng object from our global origin
+
         originLocation = new google.maps.LatLng(globalOriginLatlng.latitude, globalOriginLatlng.longitude);
 
         // put origin latlng object into a list
         var originLocationList = [originLocation];
 
-        console.log(originLocationList);
-
         // same for destination
         var destinationLocation = new google.maps.LatLng(value.location_lat, value.location_long);
         var destinationLocationList = [destinationLocation];
-
-        console.log(destinationLocation);
 
         // get a new service
         var service = new google.maps.DistanceMatrixService();
@@ -242,6 +249,8 @@ function getOriginDestinationDrivingDistance()
                 avoidHighways: false,
                 avoidTolls: false
             },  function(response, status) { // call back function finishes things off
+
+
 
                     // check the status of the response
                     if (status != google.maps.DistanceMatrixStatus.OK)
@@ -262,20 +271,55 @@ function getOriginDestinationDrivingDistance()
                     // push the text into our global object
                     globalResultList[count].location_driving_miles = driving_miles_text;
 
+                    var maxDistance = maximumDistance.options[maximumDistance.selectedIndex].value * 1;
+
                     // checks our driving distance
                     // keeps us accurate around lakes, rivers and streams
-                    if (driving_miles_value < (maximumDistance.options[maximumDistance.selectedIndex].value * 1))
+                    if (driving_miles_value < maxDistance)
                     {
                         addResultToList(globalResultList[count]);
                         addMapPins(globalResultList[count]);
+                        // anything outside our max driving range gets skipped
+
+                        var recordLatlng = new google.maps.LatLng(globalResultList[count].location_lat, globalResultList[count].location_long);
+
+                        globalLatLongList.push(recordLatlng);
                     }
-                    // anything outside our max driving range gets skipped
+
 
                     // increment our global counter
                     globalArrayCounter = (count + 1);
-                }
-        )
-    })
+
+                    // we're on the last one so run this
+                    if (globalArrayCounter == globalResultList.length)
+                    {
+                        expandMap();
+                    }
+                }// end callback
+        ) // end service
+    })// end foreach
+
+
+}// end function
+
+function expandMap()
+{
+    if (globalLatLongList.length == 0)
+    {
+        writeError('No retailers were found near you. Please try a larger distance');
+        return false;
+    }
+
+    var bounds = new google.maps.LatLngBounds();
+
+    // loop through items and expand the map area
+    for (var i = 0; i < globalLatLongList.length; i++)
+    {
+        bounds.extend(globalLatLongList[i]);
+    }
+
+    map.setCenter(bounds.getCenter());
+    map.fitBounds(bounds);
 }
 
 /*

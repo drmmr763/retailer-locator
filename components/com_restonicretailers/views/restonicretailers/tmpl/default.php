@@ -17,7 +17,7 @@
 	            <option value="50">50 Miles</option>
 	            <option value="100">100 Miles</option>
 	        </select>
-	        <input class="btn btn-priamry input-medium" type="submit" name="submit" id="submit" value="Search Locations">
+	        <button class="btn btn-priamry input-medium" type="button" name="submit" id="submit">Search Locations</button>
 	    </fieldset>
 	    <img class="hidden" src="/components/com_locateretailers/assets/images/ajax-loader.gif" id="loader">
 	    <div class="fade alert hidden"></div>
